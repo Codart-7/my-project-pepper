@@ -1,10 +1,10 @@
 import express from 'express';
-import appController from '../controller/AppController';
-import auth from '../controller/AuthController';
-import inventoryController from '../controller/InventoryController';
-import permissionController from '../controller/PermissionController';
-import roleController from '../controller/RoleController';
-import userController from '../controller/UserController';
+import appController from '../v1/AppController';
+import auth from '../v1/AuthController';
+import inventoryController from '../v1/InventoryController';
+import permissionController from '../v1/PermissionController';
+import roleController from '../v1/RoleController';
+import userController from '../v1/UserController';
 
 const router = express.Router();
 

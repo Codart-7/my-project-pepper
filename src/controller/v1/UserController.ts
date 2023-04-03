@@ -4,9 +4,8 @@
 // Method to delete a user only if current user has the superadmin role or admin role
 // Method to fetch all users only if current user has the superadmin role or admin role
 
-import { db } from "../utils/db.server";
+import { db } from "../../utils/db.server";
 import { Request, Response, NextFunction } from "express";
-import { checkPermission } from "../utils/utilFunctions";
 import { BaseController, SUPERADMIN, ADMIN } from "./BaseController";
 import { User } from "@prisma/client";
 
@@ -40,7 +39,7 @@ class UserController extends BaseController {
               }
             }
           },
-        }).then((response) => {
+        }).then((response: any) => {
           if (response) {
             let result = {
               statusCode: 201,
@@ -95,7 +94,7 @@ class UserController extends BaseController {
               roleID: true,
               role: true,
             }
-          }).then((response) => {
+          }).then((response: any) => {
             if (response) {
               let result = {
                 statusCode: 200,
@@ -191,7 +190,7 @@ class UserController extends BaseController {
           where: {
             id: parseInt(userID),
           }
-        }).then((response) => {
+        }).then((response: any) => {
           if (response) {
             let result = {
               statusCode: 200,
