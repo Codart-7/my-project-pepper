@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import roleController from '../rolesNpermissions/Controllers/RoleController';
 import permissionController from '../rolesNpermissions/Controllers/PermissionController';
-import auth from '../AuthController';
+import auth from '../Authentication/AuthController';
 
 const router: Router = Router();
 

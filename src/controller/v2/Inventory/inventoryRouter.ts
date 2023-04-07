@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import inventoryController from './InventoryController';
-import auth from '../AuthController';
+import auth from '../Authentication/AuthController';
 
 const router: Router = Router();
 

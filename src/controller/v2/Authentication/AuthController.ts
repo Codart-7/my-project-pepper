@@ -1,13 +1,61 @@
-import { db } from "../utils/db.server";
-import redisClient from "../utils/redis.server";
+import { db } from "../../../utils/db.server";
+import redisClient from "../../../utils/redis.server";
 import { Request, Response, NextFunction } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { parseCookies } from "../utils/utilFunctions";
+import { parseCookies } from "../../../utils/utilFunctions";
+
+
+import * as jwt from 'jsonwebtoken';
+import expressJwt from 'express-jwt';
+import * as EmailValidator from 'email-validator';
+import { generateSecret } from "../../../utils/utilFunctions"
+
 
 
 interface AuthRequest extends Request {
     username?: string;
 }
+
+
+class ImprovedAuth {
+    private secretKey: string;
+
+    constructor() {
+        this.secretKey = generateSecret(64);
+    }
+
+    public async login(req: Request, res: Response) {
+        try {
+            const { email, password } = req.body;
+
+            // Check email is valid
+            if (!email || !EmailValidator.validate(email)) {
+                return res.status(400).send({ auth: false, message: 'Email is required or malformed' });
+            }
+
+            // Check password is valid
+            if (!password) {
+                return res.status(400).send({ auth: false, message: 'Password is required' });
+            }
+
+            const user = await db.user.findUnique({ where: {email, password} });
+
+            if (user) {
+                const token = jwt.sign(user.toJSON(), this.secretKey, { algorithm: 'HS256' });
+                await redisClient.set(token, user.username, 60 * 60 * 24);
+                res.status(200).cookie('token', token).send(`${user.username} logged in`);
+            } else {
+                console.log('Email or Password is incorrect');
+                res.status(404).send('Email or Password is incorrect');
+            }
+        } catch (error) {
+            console.log("Missing information", error);
+            res.status(400).send('Bad request');
+        }
+    }
+}
+
+
 class Auth {
     async login(req: Request, res: Response) {
         try {

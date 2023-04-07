@@ -4,6 +4,7 @@
 import {BaseController, SUPERADMIN, ADMIN} from "../controller/BaseController";
 import { Role, User } from "@prisma/client";
 import { db } from "../utils/db.server";
+import crypto from 'crypto';
 import { Request, Response, NextFunction } from "express";
 import { PassThrough } from "stream";
 import redisClient from "../utils/redis.server";
@@ -42,4 +43,9 @@ export async function checkPermission(username: string) {
       }
     }
     return false;
+};
+
+// Generate a secret
+export function generateSecret(length: number) {
+  return crypto.randomBytes(length).toString('hex');
 };
