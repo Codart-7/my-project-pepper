@@ -1,4 +1,4 @@
-import { db } from "../utils/db.server";
+import { db } from "../../utils/db.server";
 import { Request, Response, NextFunction } from "express";
 import { BaseController, SUPERADMIN, ADMIN } from "./BaseController";
 

@@ -4,7 +4,7 @@
 // Method to delete an inventory item only if the user has the superadmin role or admin role or inventory manager role
 // Method to reduce the count of an inventory item only if the user has the superadmin role or admin role or sales role
 
-import { db } from "../utils/db.server";
+import { db } from "../../utils/db.server";
 import { Request, Response } from "express";
 
 class InventoryController {

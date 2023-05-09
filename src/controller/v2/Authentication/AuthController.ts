@@ -1,29 +1,12 @@
 import { db } from "../../../utils/db.server";
-import redisClient from "../../../utils/redis.server";
 import { Request, Response, NextFunction } from "express";
-import { v4 as uuidv4 } from "uuid";
-import { parseCookies } from "../../../utils/utilFunctions";
-
-
 import * as jwt from 'jsonwebtoken';
-import expressJwt from 'express-jwt';
 import * as EmailValidator from 'email-validator';
-import { generateSecret } from "../../../utils/utilFunctions"
+import { config } from "../config";
+import redisClient from "../../../utils/redis.server";
 
 
-
-interface AuthRequest extends Request {
-    username?: string;
-}
-
-
-class ImprovedAuth {
-    private secretKey: string;
-
-    constructor() {
-        this.secretKey = generateSecret(64);
-    }
-
+class Auth {
     public async login(req: Request, res: Response) {
         try {
             const { email, password } = req.body;
@@ -38,102 +21,110 @@ class ImprovedAuth {
                 return res.status(400).send({ auth: false, message: 'Password is required' });
             }
 
-            const user = await db.user.findUnique({ where: {email, password} });
+            // Get User from DB
+            const user = await db.user.findUnique({
+                where: { email },
+                // select: { id: true, email: true, username: true, roleID: true }
+            });
 
-            if (user) {
-                const token = jwt.sign(user.toJSON(), this.secretKey, { algorithm: 'HS256' });
-                await redisClient.set(token, user.username, 60 * 60 * 24);
-                res.status(200).cookie('token', token).send(`${user.username} logged in`);
-            } else {
+            // encode sent password
+            const encodedpassword = Buffer.from(password, 'utf8').toString("base64");
+
+            // Check if user not is found or password is incorrect
+            if (!user || encodedpassword !== user.password) {
                 console.log('Email or Password is incorrect');
-                res.status(404).send('Email or Password is incorrect');
+                return res.status(404).send('Email or Password is incorrect');
             }
+
+            const userData = {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username,
+                'roleID': user.roleID
+            }
+
+            // Send token as cookie
+            const accessToken = jwt.sign(userData, config.jwt.accessKey, { algorithm: 'HS256', expiresIn: '50s'});
+            const refreshToken = jwt.sign(userData, config.jwt.refreshKey, { algorithm: 'HS256', expiresIn: '1d'});
+            await redisClient.set(refreshToken, user.username, 60 * 60 * 24);
+            res
+            .cookie('accessToken', accessToken, {
+                httpOnly: true,
+                sameSite: 'strict'
+            })
+            .cookie('refreshToken', refreshToken, {
+                httpOnly: true,
+                // secure: true,
+                sameSite: 'strict',
+                maxAge: 24 * 60 * 60 * 1000
+            })
+            .status(200)
+            .send(`${user.username} logged in`);
         } catch (error) {
             console.log("Missing information", error);
             res.status(400).send('Bad request');
         }
     }
-}
 
+    public async logout(req: Request, res: Response) {
+        const cookies = req.cookies;
+        if (!cookies || !cookies.refreshToken || !cookies.accessToken) return res.sendStatus(204);
 
-class Auth {
-    async login(req: Request, res: Response) {
-        try {
-            const authHeader = req.headers.authorization;
+        const refreshToken = cookies.refreshToken;
 
-            if (authHeader) {
-                const basicAuth = authHeader.split(' ')[1];
-                const decodedAuth = Buffer.from(basicAuth, 'base64').toString("utf8");
-                const [username, password] = decodedAuth.split(':');
-
-                const user = await db.user.findUnique({ where: { username } }) || await db.user.findUnique({ where: {email: username}});
-          
-                if (user) {
-                    const encodedpassword = Buffer.from(password, 'utf8').toString("base64");
-                    if (user.password === encodedpassword) {
-                        const token = uuidv4();
-                        await redisClient.set(token, username, 60 * 60 * 24);
-                        res.status(200).cookie('token', token).send(`${username} logged in`);
-                        console.log(`${username} logged in`);
-                    } else {
-                        console.log('Incorrect Password');
-                        res.status(401).send('Incorrect Password');
-                    }
-                } else {
-                    console.log('User not found');
-                    res.status(404).send('User not found');
-                }
-            }
-        } catch (error) {
-            console.log("Missing information", error);
-            res.status(400).send('Bad request')
-        }    
+        res.status(200).clearCookie('token').send('Logged out');
     }
 
-    async logout(req: Request, res: Response) {
+    public async auth(req: Request, res: Response, next: NextFunction) {
         try {
-            const cookies = await parseCookies(req);
-            const {token} = cookies
-            if (token) {
-                await redisClient.del(token);
-                console.log(`logged out`);
-                res.status(200).clearCookie('token').send('Logged out');
-            } else {
-                res.status(401).send('Unauthorized');
-            }
-        } catch (error) {
-            console.log(error);
-            res.status(500).send('Internal server error');
-        }
-    }
+            const authHeader = req.headers['authorization']
+            if (!authHeader) { return res.status(401).send('Unauthorized'); }
 
-    async auth(req: AuthRequest, res: Response, next: NextFunction) {
-        try {
-            const cookies = await parseCookies(req);
-            const {token} = cookies
-            if (token) {
-                const username = await redisClient.get(token);
-                if (username) {
-                    // req.username = username;
-                    const user = await db.user.findUnique({ where: { username } });
-                    if (user) {
-                        req.body = {...req.body, uname: username};
-                        // req.body.username = username
-                        res.cookie('token', token)
-                        next();
-                    }
-                } else {
-                    res.status(401).send('Unauthorized');
-                }
-            } else {
-                res.status(401).send('Unauthorized');
-            }
+            const token = authHeader.split(' ')[1];
+
+            jwt.verify(token, config.jwt.accessKey, (err, decoded) => {
+                if (err) return res.sendStatus(403);
+                req.user = decoded;
+                next();
+            });
         } catch (error) {
             console.log(error);
             res.status(500).send('Internal Server Error');
         }
     }
+
+    public async refreshToken(req: Request, res: Response) {
+        const cookies = req.cookies;
+        if (!cookies || !cookies.refreshToken) return res.sendStatus(401);
+
+        const refreshToken = cookies.refreshToken;
+
+        const username = await redisClient.get(refreshToken);
+        if (!username) return res.sendStatus(403);
+
+        jwt.verify(refreshToken, config.jwt.refreshKey, (err: any, decoded: any) => {
+            if (err || username !== decoded.username) return res.sendStatus(403);
+
+            const userData = {
+                'id': decoded.id,
+                'email': decoded.email,
+                'username': decoded.username,
+                'roleID': decoded.roleID
+            }
+
+            const accessToken = jwt.sign(userData, config.jwt.accessKey, { algorithm: 'HS256', expiresIn: '50s'});
+
+            res
+            .cookie('accessToken', accessToken, {
+                httpOnly: true,
+                sameSite: 'strict'
+            })
+            .status(200)
+            .send(`${username} logged in`);
+        })
+    }
 }
+
 
 const auth = new Auth();
 export default auth;

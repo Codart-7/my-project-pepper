@@ -108,3 +108,6 @@ dist
 venv/
 
 #.gitignore
+
+# Rest Client
+*.rest

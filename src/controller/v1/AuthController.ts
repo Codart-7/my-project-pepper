@@ -1,8 +1,8 @@
-import { db } from "../utils/db.server";
-import redisClient from "../utils/redis.server";
+import { db } from "../../utils/db.server";
+import redisClient from "../../utils/redis.server";
 import { Request, Response, NextFunction } from "express";
 import { v4 as uuidv4 } from "uuid";
-import { parseCookies } from "../utils/utilFunctions";
+import { parseCookies } from "../../utils/utilFunctions";
 
 
 interface AuthRequest extends Request {
@@ -51,7 +51,7 @@ class Auth {
                 console.log(`logged out`);
                 res.status(200).clearCookie('token').send('Logged out');
             } else {
-                res.status(401).send('Unauthorized');
+                res.sendStatus(204);
             }
         } catch (error) {
             console.log(error);

@@ -6,13 +6,10 @@
 
 
 // (Messing with the superadmin role is prohibitted)
-import { db } from "../utils/db.server";
-import { Request, Response, NextFunction } from "express";
-import { checkPermission } from "../utils/utilFunctions";
-import { Role, RolePermissions, User } from "@prisma/client";
-import {BaseController, SUPERADMIN, ADMIN} from "./BaseController";
-import baseController from "./BaseController";
-import { rolePermissions } from "../prisma/seed/data";
+import { db } from "../../../../utils/db.server";
+import { Request, Response } from "express";
+import { Role } from "@prisma/client";
+import {BaseController, SUPERADMIN} from "../../BaseController";
 
 
 class RoleController extends BaseController {

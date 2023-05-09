@@ -5,8 +5,8 @@
 // Method to fetch all users only if current user has the superadmin role or admin role
 
 import { db } from "../../utils/db.server";
-import { Request, Response, NextFunction } from "express";
-import { BaseController, SUPERADMIN, ADMIN } from "./BaseController";
+import { Request, Response } from "express";
+import { BaseController } from "./BaseController";
 import { User } from "@prisma/client";
 
 class UserController extends BaseController {

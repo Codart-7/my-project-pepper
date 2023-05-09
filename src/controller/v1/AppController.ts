@@ -1,5 +1,5 @@
-import { db } from "../utils/db.server";
-import redisClient from "../utils/redis.server";
+import { db } from "../../utils/db.server";
+import redisClient from "../../utils/redis.server";
 import { Request, Response } from "express";
 
 class AppController {

@@ -1,0 +1,16 @@
+import jwt from 'jsonwebtoken';
+import expressJwt from 'express-jwt';
+import { Request, Response, NextFunction } from 'express';
+
+// Generate a JWT
+const token = jwt.sign({ userId: 123 }, 'secret-key', { expiresIn: '1h' });
+
+// Verify a JWT and add user to request object
+const authMiddleware = expressJwt({ secret: 'secret-key' });
+
+// Protected route
+app.get('/api/users', authMiddleware, (req: Request, res: Response, next: NextFunction) => {
+  // req.user contains the user object from the JWT payload
+  const userId = req.user.userId;
+  // handle the request
+});

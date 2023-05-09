@@ -1,7 +1,7 @@
 // I put all the assist functions here so that we have one place to modify them and
 // they can be used every where.
 
-import {BaseController, SUPERADMIN, ADMIN} from "../controller/BaseController";
+import {BaseController, SUPERADMIN, ADMIN} from "../controller/v1/BaseController";
 import { Role, User } from "@prisma/client";
 import { db } from "../utils/db.server";
 import crypto from 'crypto';
